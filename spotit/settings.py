@@ -1,27 +1,17 @@
 from pathlib import Path
-import os
+
+from decouple import Csv, config
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-def env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def env_list(name: str, default: str = "") -> list[str]:
-    value = os.getenv(name)
-    if value is None:
-        value = default
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-secret-key")
-DEBUG = env_bool("DJANGO_DEBUG", True)
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="dev-insecure-secret-key")
+DEBUG = config("DJANGO_DEBUG", cast=bool, default=True)
+ALLOWED_HOSTS = config(
+    "DJANGO_ALLOWED_HOSTS",
+    cast=Csv(),
+    default="localhost,127.0.0.1",
+)
 
 
 INSTALLED_APPS = [
@@ -71,12 +61,12 @@ WSGI_APPLICATION = "spotit.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("POSTGRES_DB", "spotit"),
-        "USER": os.getenv("POSTGRES_USER", "spotit"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "spotit"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "ENGINE": config("DB_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": config("POSTGRES_DB", default="spotit"),
+        "USER": config("POSTGRES_USER", default="spotit"),
+        "PASSWORD": config("POSTGRES_PASSWORD", default="spotit"),
+        "HOST": config("POSTGRES_HOST", default="db"),
+        "PORT": config("POSTGRES_PORT", default="5432"),
     }
 }
 

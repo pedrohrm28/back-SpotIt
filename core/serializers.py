@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group, Permission
 from rest_framework import serializers
 
@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "name",
+            "phone",
             "is_active",
             "is_staff",
             "groups",
@@ -71,6 +72,9 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class ItemSerializer(serializers.ModelSerializer):
     reporter = serializers.PrimaryKeyRelatedField(read_only=True)
+    reporter_name = serializers.CharField(source="reporter.name", read_only=True)
+    reporter_email = serializers.EmailField(source="reporter.email", read_only=True)
+    reporter_phone = serializers.CharField(source="reporter.phone", read_only=True)
 
     class Meta:
         model = Item
@@ -79,12 +83,70 @@ class ItemSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "status",
+            "category",
             "location",
             "event_date",
             "image_url",
             "contact_info",
+            "receiver_name",
+            "receiver_contact",
             "reporter",
+            "reporter_name",
+            "reporter_email",
+            "reporter_phone",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "reporter"]
+
+    def validate(self, attrs):
+        status = attrs.get("status")
+        receiver_name = attrs.get("receiver_name")
+        receiver_contact = attrs.get("receiver_contact")
+
+        if self.instance is not None:
+            if status is None:
+                status = self.instance.status
+            if receiver_name is None:
+                receiver_name = self.instance.receiver_name
+            if receiver_contact is None:
+                receiver_contact = self.instance.receiver_contact
+
+        if status == Item.Status.RETURNED:
+            if not receiver_name or not receiver_contact:
+                raise serializers.ValidationError(
+                    {
+                        "receiver_name": "This field is required when status is returned.",
+                        "receiver_contact": "This field is required when status is returned.",
+                    }
+                )
+
+        return attrs
+
+
+class EmailAuthTokenSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(style={"input_type": "password"}, trim_whitespace=False)
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        if email and password:
+            user = authenticate(
+                request=self.context.get("request"),
+                email=email,
+                password=password,
+            )
+        else:
+            raise serializers.ValidationError(
+                'Must include "email" and "password".', code="authorization"
+            )
+
+        if not user:
+            raise serializers.ValidationError(
+                "Unable to log in with provided credentials.", code="authorization"
+            )
+
+        attrs["user"] = user
+        return attrs

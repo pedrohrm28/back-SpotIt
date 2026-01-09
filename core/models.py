@@ -15,10 +15,13 @@ class Item(models.Model):
         choices=Status.choices,
         default=Status.LOST,
     )
+    category = models.CharField(max_length=120, blank=True)
     location = models.CharField(max_length=255, blank=True)
     event_date = models.DateField(null=True, blank=True)
     image_url = models.URLField(blank=True)
     contact_info = models.CharField(max_length=255, blank=True)
+    receiver_name = models.CharField(max_length=150, blank=True)
+    receiver_contact = models.CharField(max_length=255, blank=True)
     reporter = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
